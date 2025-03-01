@@ -2,6 +2,9 @@ import streamlit as st
 import time
 import random
 import pandas as pd
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 # App Title
 st.title("📞 Vocalyze - Agentic AI-Driven Spoken Aptitude Test")
