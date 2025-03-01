@@ -3,9 +3,13 @@ import time
 import random
 import pandas as pd
 from dotenv import load_dotenv
+from agent import agent
 import os
 load_dotenv()
 
+global_call_status = {"call_status": ""}
+
+    
 # App Title
 st.title("📞 Vocalyze - Agentic AI-Driven Spoken Aptitude Test")
 
@@ -25,51 +29,88 @@ call_statuses = ["Queue", "Dialing", "Busy", "Ongoing", "Failed", "Completed"]
 if st.button("Start Call"):
     if phone_number and language:
         st.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
+        agent_response = agent("+9232", "2", "en", global_call_status)
+        print(agent_response)
         
-        # Simulating real-time call status updates
-        for status in call_statuses:
-            time.sleep(random.randint(1, 3))  # Simulating status change delay
-            status_placeholder.write(f"📡 Call Status: **{status}**")
 
-        if status == "Completed":
+        if global_call_status["call_status"] == "queue":
+            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
+        
+        if global_call_status["call_status"] == "busy":
+            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
+            st.error("❌ Call Attempted! The recipient was busy. Please try again later.")
+        
+        if global_call_status["call_status"] == "failed":
+            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
+            st.error("❌ Call Attempted! The call could not be completed due to an unknown issue. Please try again later.")
+
+             
+        if global_call_status["call_status"] == "completed":
             st.success("✅ Call Completed! Test results will be processed soon.")
 
             # Simulated Call Details
-            call_length = round(random.uniform(1.0, 3.0), 2)  # Call duration between 1-3 mins
+            call_length = '1.23'  # Call duration between 1-3 mins
             country = "PK"
-            price = round(call_length * 3.72, 2)  # Example price calculation
+            price = "6"  # Example price calculation
 
             # Display Call Details
             st.write("### Call Details")
             col1, col2, col3 = st.columns(3)
-            col1.metric("📌 Country", country)
-            col2.metric("⏳ Call Length", f"{call_length} mins")
-            col3.metric("💰 Price", f"${price}")
+            col1.metric("📌 Country", agent_response.get("country", None))
+            col2.metric("⏳ Call Length", f"{agent_response.get("call_length")} mins" if agent_response.get("call_length", False) else None)
+            col3.metric("💰 Price", f"${agent_response.get("call_price")}" if agent_response.get("call_price", False) else None)
 
-            # Simulated Score
-            score = random.randint(40, 90)  # Random score between 40% to 90%
-            st.write("### Your Score")
-            st.markdown(f"<h2 style='text-align: center; color: #4CAF50;'>{score}%</h2>", unsafe_allow_html=True)
+            # Score
+            score = agent_response.get('score', False)
+            if score:
+                st.write("### Your Score")
+                st.markdown(f"<h2 style='text-align: center; color: #4CAF50; pointer-events: none;'>{score}%</h2>", unsafe_allow_html=True)
 
-            # Simulated Questions Table
-            st.write("### Question Analysis")
-            data = {
-                "Question": ["What is 2 + 2?", "Capital of France?", "Sun rises from?", "Largest ocean?"],
-                "Correct Answer": ["4", "Paris", "East", "Pacific"],
-                "Your Answer": ["4", "Paris", "West", "Atlantic"]
-            }
+            if "analysis" in agent_response and isinstance(agent_response["analysis"], list):
+                st.write("### Question Analysis")
+                data = {
+                    "Question": [item["question"] for item in agent_response["analysis"]],
+                    "Correct Answer": [item["correct_answer"] for item in agent_response["analysis"]],
+                    "Your Answer": [item["user_answer"] for item in agent_response["analysis"]],
+                    "Result": ["✅" if item["is_correct"] else "❌" for item in agent_response["analysis"]]
+                 }
 
-            df = pd.DataFrame(data)
-            st.table(df)
+                df = pd.DataFrame(data)
+                st.markdown(
+                """
+                <style>
+                .dataframe { 
+                    width: 100%; 
+                    margin: auto; 
+                    font-size: 1.1rem; 
+                    padding: 6px; 
+                    border: 1px solid #ddd; 
+                    border-radius: 10px; 
+                    text-align: center;
+                }
+                table th {
+                    padding: 15px !important;
+                    text-align: center !important;
+                    font-weight: bold; /* Bold for table headers */
+                }
+                table td {
+                    padding: 15px !important;
+                    text-align: center !important;
+                    font-family: Roboto, Arial, sans-serif;
+                }   
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+                st.table(df)
 
-            # Lead Generated
-            lead_generated = random.choice(["Yes", "No"])
-            st.write("### Customer Interested")
-            
-            if lead_generated == "Yes":
-                st.success("🎯 Customer Interested: **Yes**")
-            else:
-                st.error("❌ Customer Interested: **No**")
+            # Lead Generated Status
+            if agent_response.get("lead_generated", None):
+                st.write("### Customer Interested")
+                if agent_response["lead_generated"] == "yes":
+                    st.success("🎯 Customer Interested: **Yes**")
+                else:
+                    st.error("❌ Customer Interested: **No**")
 
     else:
         st.error("❌ Please enter a valid phone number and select a language.")
