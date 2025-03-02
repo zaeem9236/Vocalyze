@@ -64,7 +64,7 @@ if st.button("Start Call"):
             score = agent_response.get('score', False)
             if score:
                 st.write("### Your Score")
-                st.markdown(f"<h2 style='text-align: center; color: #4CAF50; pointer-events: none;'>{score}%</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align: center; color: {'#4CAF50' if score >= 70 else '#F44336'}; pointer-events: none;'>{score}%</h2>", unsafe_allow_html=True)
 
             if "analysis" in agent_response and isinstance(agent_response["analysis"], list):
                 st.write("### Question Analysis")
@@ -76,33 +76,9 @@ if st.button("Start Call"):
                  }
 
                 df = pd.DataFrame(data)
-                st.markdown(
-                """
-                <style>
-                .dataframe { 
-                    width: 100%; 
-                    margin: auto; 
-                    font-size: 1.1rem; 
-                    padding: 6px; 
-                    border: 1px solid #ddd; 
-                    border-radius: 10px; 
-                    text-align: center;
-                }
-                table th {
-                    padding: 15px !important;
-                    text-align: center !important;
-                    font-weight: bold; /* Bold for table headers */
-                }
-                table td {
-                    padding: 15px !important;
-                    text-align: center !important;
-                    font-family: Roboto, Arial, sans-serif;
-                }   
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-                st.table(df)
+                
+                # st.table(df)
+                st.dataframe(df, use_container_width=True)
 
             # Lead Generated Status
             if agent_response.get("lead_generated", None):
