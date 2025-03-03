@@ -4,7 +4,7 @@ import random
 import pandas as pd
 from dotenv import load_dotenv
 from agent import agent
-import os
+import os, re
 load_dotenv()
 
 global_call_status = {"call_status": ""}
@@ -15,9 +15,12 @@ st.title("📞 Vocalyze - Agentic AI-Driven Spoken Aptitude Test")
 
 # Number input field
 phone_number = st.text_input("Enter your phone number", placeholder="+1234567890", autocomplete="off")
-
+if phone_number:
+    if not re.match(r'^\+?\d*$', phone_number):
+        st.error("Please enter only numbers with an optional '+' at the start.")
+        
 # Language selection
-language = st.selectbox("Select Language", ["English", "Urdu", "Spanish", "French"])
+language = st.selectbox("Select Language", ["English"])
 
 # Call status placeholder
 status_placeholder = st.empty()
