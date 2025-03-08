@@ -28,13 +28,14 @@ status_placeholder = st.empty()
 # Call statuses to simulate real-time updates
 call_statuses = ["Queue", "Dialing", "Busy", "Ongoing", "Failed", "Completed"]
 
+import threading
 # Start Call button
 if st.button("Start Call"):
     if phone_number and language:
         st.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
-        agent_response = agent("+9232", "2", "en", global_call_status)
-        print(agent_response)
-        
+        global_call_status["call_status"] = "queue"
+        status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
+        agent_response = agent(phone_number, "2", "en", global_call_status)    
 
         if global_call_status["call_status"] == "queue":
             status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
@@ -51,23 +52,19 @@ if st.button("Start Call"):
         if global_call_status["call_status"] == "completed":
             st.success("✅ Call Completed! Test results will be processed soon.")
 
-            # Simulated Call Details
-            call_length = '1.23'  # Call duration between 1-3 mins
-            country = "PK"
-            price = "6"  # Example price calculation
 
             # Display Call Details
             st.write("### Call Details")
             col1, col2, col3 = st.columns(3)
             col1.metric("📌 Country", agent_response.get("country", None))
-            col2.metric("⏳ Call Length", f"{agent_response.get("call_length")} mins" if agent_response.get("call_length", False) else None)
-            col3.metric("💰 Price", f"${agent_response.get("call_price")}" if agent_response.get("call_price", False) else None)
+            col2.metric("⏳ Call Length", f"{round(float(agent_response.get("call_length")), 2)} mins" if agent_response.get("call_length", False) else None)
+            col3.metric("💰 Price", f"$ {agent_response.get("price")}" if agent_response.get("price", False) else None)
 
             # Score
             score = agent_response.get('score', False)
             if score:
                 st.write("### Your Score")
-                st.markdown(f"<h2 style='text-align: center; color: {'#4CAF50' if score >= 70 else '#F44336'}; pointer-events: none;'>{score}%</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align: center; color: {'#4CAF50' if float(score) >= 70 else '#F44336'}; pointer-events: none;'>{int(float(score))} %</h2>", unsafe_allow_html=True)
 
             if "analysis" in agent_response and isinstance(agent_response["analysis"], list):
                 st.write("### Question Analysis")
@@ -80,7 +77,6 @@ if st.button("Start Call"):
 
                 df = pd.DataFrame(data)
                 
-                # st.table(df)
                 st.dataframe(df, use_container_width=True)
 
             # Lead Generated Status
