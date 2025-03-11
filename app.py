@@ -37,6 +37,10 @@ if st.button("Start Call"):
         status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
         agent_response = agent(phone_number, "2", "en", global_call_status)    
 
+        if global_call_status["call_status"] == "denied":
+            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
+            st.warning("❌ Limit Reached! You have reached your limit for this number. Please try with a different number.")
+        
         if global_call_status["call_status"] == "queue":
             status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
         

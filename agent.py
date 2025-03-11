@@ -6,8 +6,14 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 BLAND_AI_API_KEY = os.environ.get('BLAND_AI_API_KEY')
 TWILIO_ENCRYPTED_KEY = os.environ.get('TWILIO_ENCRYPTED_KEY')
 BLAND_AI_BASE_URL = "https://api.bland.ai"
+APPWRITE_API_KEY = os.environ.get('APPWRITE_API_KEY')
+APPWRITE_PROJECT_ID = os.environ.get('APPWRITE_PROJECT_ID')
+APPWRITE_DATABASE_ID = os.environ.get('APPWRITE_DATABASE_ID')
+APPWRITE_COLLECTION_ID = os.environ.get('APPWRITE_COLLECTION_ID')
 
-
+from appwrite.client import Client
+from appwrite.services.databases import Databases
+from appwrite.query import Query
 from questions import question_data
 from langchain.chat_models import ChatOpenAI  # type: ignore
 from langgraph.graph import MessagesState
@@ -22,7 +28,17 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
 import uuid
  
-
+# Initialize Appwrite Client
+client = Client()
+client.set_endpoint("https://cloud.appwrite.io/v1")  # Update with your Appwrite endpoint
+client.set_project(APPWRITE_PROJECT_ID)  # Replace with your project ID
+client.set_key(APPWRITE_API_KEY)  # Replace with your API Ke
+# Connect to Appwrite Database
+database = Databases(client)
+database_id = APPWRITE_DATABASE_ID
+collection_id = APPWRITE_COLLECTION_ID
+document_id = ''
+pending_calls = 0
 
     
     
@@ -142,6 +158,47 @@ def fetch_aptitude_questions(state: AgentState) -> Command[Literal["initiate_cal
     )
     
 def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__end__"]]:
+    
+    
+    
+    number=state['user_phone_number']
+    global document_id
+    global pending_calls
+    document_id = ''
+    pending_calls = 0
+    
+    is_number_exists = database.list_documents(
+    database_id=database_id,
+    collection_id=collection_id,
+    queries=[Query.equal("number", number)]
+    )
+    
+    if is_number_exists['total'] == 0:
+      response = database.create_document(
+        database_id=database_id,
+        collection_id=collection_id,
+        document_id="unique()",  # Generates a unique ID
+        data={
+          "number": number,
+          "pending-calls": 2
+          }
+        )
+      # print('response -- ', response)
+      document_id = response['$id']
+      pending_calls = response['pending-calls']
+    else:
+      document_id = is_number_exists['documents'][0]['$id']
+      pending_calls = is_number_exists['documents'][0]['pending-calls']
+      
+    print('document_id : ', document_id)
+    print('pending_calls : ', pending_calls)
+    
+    if pending_calls == 0:
+      return Command(
+          update={'call_status': 'denied', 'call_id': ''},
+          goto='__end__',
+      )
+    
     call_status = 'queue'
     call_id = ''
     debug_mode = False
@@ -278,6 +335,12 @@ def analyze_call_data(state: AgentState):
     agent_state_tracker=state
     response = analyzer({"input": f"call_id={state['call_id']}"})
     state["messages"].append(AIMessage(content=json.dumps(response['output'])))
+    database.update_document(
+        database_id=database_id,
+        collection_id=collection_id,
+        document_id=document_id,
+        data={"pending-calls": (pending_calls-1) if pending_calls > 0 else 0}
+    )
     return Command(
           goto="__end__",
       )
@@ -304,6 +367,10 @@ config = {"configurable": {"thread_id": f"{random_uuid}"}}
 def agent(user_phone_num: str, num_questions: str, language: str, status):
     
     response = app.invoke({"messages": "", "user_phone_number": user_phone_num, "num_questions": num_questions, "language": language},config)
+    
+    if response['call_status'] == 'denied':
+      status["call_status"] = 'denied'
+      return {}
     
     if response['call_status'] == 'busy':
       status["call_status"] = 'busy'
