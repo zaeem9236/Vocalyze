@@ -10,6 +10,11 @@ APPWRITE_API_KEY = os.environ.get('APPWRITE_API_KEY')
 APPWRITE_PROJECT_ID = os.environ.get('APPWRITE_PROJECT_ID')
 APPWRITE_DATABASE_ID = os.environ.get('APPWRITE_DATABASE_ID')
 APPWRITE_COLLECTION_ID = os.environ.get('APPWRITE_COLLECTION_ID')
+os.environ["LANGSMITH_TRACING"]="true"
+os.environ["LANGSMITH_ENDPOINT"]="https://api.smith.langchain.com"
+os.environ["LANGSMITH_API_KEY"]=LANGSMITH_API_KEY
+os.environ["LANGSMITH_PROJECT"]="VOCALYZE"
+os.environ["OPENAI_API_KEY"]=OPENAI_API_KEY
 
 from appwrite.client import Client
 from appwrite.services.databases import Databases
@@ -334,6 +339,8 @@ def analyze_call_data(state: AgentState):
     global agent_state_tracker
     agent_state_tracker=state
     response = analyzer({"input": f"call_id={state['call_id']}"})
+    print('Log 1---------- ,  ', type(response['output']))
+    print('Log 2---------- ,  ', response['output'])
     state["messages"].append(AIMessage(content=json.dumps(response['output'])))
     database.update_document(
         database_id=database_id,

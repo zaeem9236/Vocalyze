@@ -86,7 +86,7 @@ if st.button("Start Call"):
             # Lead Generated Status
             if agent_response.get("lead_generated", None):
                 st.write("### Customer Interested")
-                if agent_response["lead_generated"] == "yes":
+                if agent_response["lead_generated"] == "True" or agent_response["lead_generated"] == True:
                     st.success("🎯 Customer Interested: **Yes**")
                 else:
                     st.error("❌ Customer Interested: **No**")
