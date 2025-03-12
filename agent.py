@@ -31,7 +31,11 @@ from typing import Literal
 from langgraph.graph import Graph, StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
+from langsmith import Client as LangsmithClient
 import uuid
+
+# Initialize Langsmith Client
+langsmith_client = LangsmithClient()
  
 # Initialize Appwrite Client
 client = Client()
@@ -44,6 +48,7 @@ database_id = APPWRITE_DATABASE_ID
 collection_id = APPWRITE_COLLECTION_ID
 document_id = ''
 pending_calls = 0
+langsmith_logs = []
 
     
     
@@ -297,6 +302,7 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
     if not debug_mode:
       response = requests.request("POST", url = f"{BLAND_AI_BASE_URL}/v1/calls", json=payload, headers=headers)
       response = json.loads(response.text)
+      langsmith_logs.append({"value": response, "comment": "Bland API response"})
     if response['status'] == 'error':
       return Command(
           update={'call_status': 'failed', 'call_id': ''},
@@ -374,6 +380,18 @@ config = {"configurable": {"thread_id": f"{random_uuid}"}}
 def agent(user_phone_num: str, num_questions: str, language: str, status):
     
     response = app.invoke({"messages": "", "user_phone_number": user_phone_num, "num_questions": num_questions, "language": language},config)
+    
+    # updating logs in langsmith
+    run =  list(langsmith_client.list_runs(project_name=os.environ.get("LANGSMITH_PROJECT"), limit=1))    # Convert generator to a list
+    # Create a feedback log entry
+    for i, log in enumerate(langsmith_logs, start=1):
+      langsmith_client.create_feedback(
+          run_id=run[0].id,
+          key=i,  # A unique key for your log
+          score=None,  # No numerical score, just storing the log
+          comment=log["comment"],  # The actual log message
+          value=log["value"],  # The value associated with the log
+      )
     
     if response['call_status'] == 'denied':
       status["call_status"] = 'denied'
