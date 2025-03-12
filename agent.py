@@ -87,6 +87,7 @@ def get_call_details(call_id: str) -> dict:
     call_details_url = f"{BLAND_AI_BASE_URL}/v1/calls/{call_id}"
     details = requests.request("GET", url=call_details_url, headers={"authorization": BLAND_AI_API_KEY,})
     details = json.loads(details.text)
+    langsmith_logs.append({"value": {"type": type(details), "value": details}, "comment": "Call details"})
     prompt_data = {
         "num_questions": agent_state_tracker["num_questions"],
         "fetched_questions": agent_state_tracker["fetched_questions"],
@@ -146,8 +147,10 @@ def get_call_details(call_id: str) -> dict:
       - Always calculate the result based on the **fetched_questions** field. Ignore questions from the summary if not present in **fetched_questions**.
       - Be consistent with the **JSON format**.
       """
+    langsmith_logs.append({"value": prompt, "comment": "Tool prompt"})
     final_response = llm.invoke(prompt).content
     print("final_response ",prompt)
+    langsmith_logs.append({"value": final_response, "comment": "Tool final result"})
     return final_response
 
 tools = [get_call_details]
@@ -302,7 +305,7 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
     if not debug_mode:
       response = requests.request("POST", url = f"{BLAND_AI_BASE_URL}/v1/calls", json=payload, headers=headers)
       response = json.loads(response.text)
-      langsmith_logs.append({"value": response, "comment": "Bland API response"})
+      langsmith_logs.append({"value": {"type": type(response), "value": response}, "comment": "Bland API response"})
     if response['status'] == 'error':
       return Command(
           update={'call_status': 'failed', 'call_id': ''},
@@ -345,8 +348,7 @@ def analyze_call_data(state: AgentState):
     global agent_state_tracker
     agent_state_tracker=state
     response = analyzer({"input": f"call_id={state['call_id']}"})
-    print('Log 1---------- ,  ', type(response['output']))
-    print('Log 2---------- ,  ', response['output'])
+    langsmith_logs.append({"value": {"type":  type(response['output']), "value": response['output']}, "comment": "Analyser response output type and value"})
     state["messages"].append(AIMessage(content=json.dumps(response['output'])))
     database.update_document(
         database_id=database_id,

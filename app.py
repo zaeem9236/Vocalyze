@@ -76,7 +76,7 @@ if st.button("Start Call"):
                     "Question": [item["question"] for item in agent_response["analysis"]],
                     "Correct Answer": [item["correct_answer"] for item in agent_response["analysis"]],
                     "Your Answer": [item["user_answer"] for item in agent_response["analysis"]],
-                    "Result": ["✅" if item["is_correct"] else "❌" for item in agent_response["analysis"]]
+                    "Result": ["✅" if item["is_correct"] == "True" else "❌" for item in agent_response["analysis"]]
                  }
 
                 df = pd.DataFrame(data)
