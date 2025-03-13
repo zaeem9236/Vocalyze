@@ -4,10 +4,12 @@ import random
 import pandas as pd
 from dotenv import load_dotenv
 from agent import agent
-import os, re
+import os, re, uuid
 load_dotenv()
 
-
+if "random_uuid" not in st.session_state or st.session_state.get("is_new_session", True):
+    st.session_state["random_uuid"] = str(uuid.uuid4())
+    st.session_state["is_new_session"] = False
     
 # App Title
 st.title("📞 Vocalyze - Agentic AI-Driven Spoken Aptitude Test")
@@ -51,7 +53,7 @@ if "button_disabled" not in st.session_state:
     st.session_state.button_disabled = False  # Initially enabled
 if st.button("Start Call", disabled=st.session_state.button_disabled, on_click=lambda: setattr(st.session_state, "button_disabled", True)):
     if phone_number and language:
-        agent_response = agent(phone_number, num_questions, "en", status_updater)    
+        agent_response = agent(phone_number, num_questions, "en", st.session_state["random_uuid"], status_updater)    
            
         if len(agent_response) != 0:
             # st.success("✅ Call Completed! Test results will be processed soon.")
