@@ -36,15 +36,16 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langsmith import Client as LangsmithClient
 import uuid
 
+
 # Initialize Langsmith Client
 langsmith_client = LangsmithClient()
  
-# Initialize Appwrite Client
+
+# Initialize & Connect to Appwrite Database
 client = Client()
 client.set_endpoint("https://cloud.appwrite.io/v1")  # Update with your Appwrite endpoint
 client.set_project(APPWRITE_PROJECT_ID)  # Replace with your project ID
 client.set_key(APPWRITE_API_KEY)  # Replace with your API Ke
-# Connect to Appwrite Database
 database = Databases(client)
 database_id = APPWRITE_DATABASE_ID
 collection_id = APPWRITE_COLLECTION_ID
@@ -52,10 +53,12 @@ document_id = ''
 pending_calls = 0
 langsmith_logs = []
 
-    
-    
+
+# Initialize OpenAI Chat Model
 llm=ChatOpenAI(model="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY, temperature=0)
 
+
+# Define the agent state
 class AgentState(MessagesState):
     user_phone_number: str
     call_id: str
@@ -64,8 +67,13 @@ class AgentState(MessagesState):
     num_questions: str
     fetched_questions: dict
     language: str
+
+
+# Define global agent state tracker
 agent_state_tracker = {}
 
+
+# Define the agent tools
 @tool(return_direct=True)
 def get_call_details(call_id: str) -> dict:
     """
@@ -104,8 +112,10 @@ def get_call_details(call_id: str) -> dict:
     print("final_response ",prompt)
     langsmith_logs.append({"value": final_response, "comment": "Tool final result"})
     return final_response
-
 tools = [get_call_details]
+
+
+# Initialize the agent
 analyzer = initialize_agent(
     tools,
     llm,
@@ -116,16 +126,17 @@ analyzer = initialize_agent(
     return_intermediate_steps= True
 )
 
+
+# Define node for the agent workflow
 def fetch_aptitude_questions(state: AgentState) -> Command[Literal["initiate_call"]]:
     return Command(
     update={"fetched_questions": random.sample(question_data, int(state['num_questions']))},
     goto="initiate_call",
     )
-    
+
+
+# Define node for the agent workflow    
 def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__end__"]]:
-    
-    
-    
     number=state['user_phone_number']
     global document_id
     global pending_calls
@@ -148,15 +159,12 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
           "pending-calls": 2
           }
         )
-      # print('response -- ', response)
       document_id = response['$id']
       pending_calls = response['pending-calls']
     else:
       document_id = is_number_exists['documents'][0]['$id']
       pending_calls = is_number_exists['documents'][0]['pending-calls']
       
-    print('document_id : ', document_id)
-    print('pending_calls : ', pending_calls)
     
     if pending_calls == 0:
       return Command(
@@ -168,7 +176,7 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
     call_id = ''
     debug_mode = False
     if debug_mode:
-      dummy_call_id = "e96fa339-f514-4d8c-97a9-d5231db4021f"
+      dummy_call_id = ""
       return Command(
           update={ "call_status": "completed", "call_id": dummy_call_id },
           goto="analyze_call_data",
@@ -264,6 +272,8 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
           goto=goto,
       )    
 
+
+# Define node for the agent workflow
 def analyze_call_data(state: AgentState):
     global agent_state_tracker
     agent_state_tracker=state
@@ -280,9 +290,10 @@ def analyze_call_data(state: AgentState):
           goto="__end__",
       )
     
+
+# Langgraph workflow
 random_uuid = uuid.uuid4()
 memory = MemorySaver()
-#Graph
 workflow = StateGraph(AgentState)
 workflow.add_node("fetch_aptitude_questions", fetch_aptitude_questions) # adding node
 workflow.add_node("initiate_call", initiate_call) # adding node
@@ -298,7 +309,7 @@ app = workflow.compile(checkpointer=memory)
 config = {"configurable": {"thread_id": f"{random_uuid}"}}
 
 
-    
+# Define the agent function   
 def agent(user_phone_num: str, num_questions: str, language: str, status):
     
     response = app.invoke({"messages": "", "user_phone_number": user_phone_num, "num_questions": num_questions, "language": language},config)
