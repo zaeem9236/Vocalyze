@@ -73,6 +73,10 @@ class AgentState(MessagesState):
 agent_state_tracker = {}
 
 
+# Define global funcion to update call status
+global_status_update_func = lambda: None
+
+
 # Define the agent tools
 @tool(return_direct=True)
 def get_call_details(call_id: str) -> dict:
@@ -242,7 +246,7 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
     call_id = response['call_id']
     event_url = f"{BLAND_AI_BASE_URL}/v1/event_stream/{call_id}"
     stop = False
-    for log_number in range(60):  # Loop 9 times
+    for log_number in range(60):  # Loop 60 times
       events = requests.request("GET", url=event_url, headers=headers)
       print('event log. ', events, events.text)
       events = json.loads(events.text)
@@ -265,6 +269,8 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
             break
       if stop:
         break
+      if 'Agent speech' in event['message'][:14] or 'Call connected' in event['message'][:14]:
+        global_status_update_func('in_progress')
       time.sleep(5)  # Wait for 5000 millisecond
     print("last_state ", state)
     return Command(
@@ -311,7 +317,9 @@ config = {"configurable": {"thread_id": f"{random_uuid}"}}
 
 # Define the agent function   
 def agent(user_phone_num: str, num_questions: str, language: str, status):
-    
+    global global_status_update_func
+    global_status_update_func = status
+    global_status_update_func('queue')
     response = app.invoke({"messages": "", "user_phone_number": user_phone_num, "num_questions": num_questions, "language": language},config)
     
     # updating logs in langsmith
@@ -327,19 +335,19 @@ def agent(user_phone_num: str, num_questions: str, language: str, status):
       )
     
     if response['call_status'] == 'denied':
-      status["call_status"] = 'denied'
+      global_status_update_func('denied')
       return {}
     
     if response['call_status'] == 'busy':
-      status["call_status"] = 'busy'
+      global_status_update_func('busy')
       return {}
     
     if response['call_status'] == 'failed':
-      status["call_status"] = 'failed'
+      global_status_update_func('failed')
       return {}
     
     if response['call_status'] == 'completed':
-      status['call_status'] = 'completed'
+      global_status_update_func('completed')
       first_decode = json.loads(response['messages'][1].content)
       # Second load (final dict conversion if still string)
       if isinstance(first_decode, str):

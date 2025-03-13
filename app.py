@@ -7,7 +7,6 @@ from agent import agent
 import os, re
 load_dotenv()
 
-global_call_status = {"call_status": ""}
 
     
 # App Title
@@ -27,39 +26,35 @@ num_questions = st.selectbox("Choose number of questions ", ['2', '4'])
 
 
 # Call status placeholder
+if "call_status" not in st.session_state:
+    st.session_state.call_status = ""
 status_placeholder = st.empty()
-
-# Call statuses to simulate real-time updates
-call_statuses = ["Queue", "Dialing", "Busy", "Ongoing", "Failed", "Completed"]
+message_placeholder = st.empty()
+def status_updater(status):
+    status_placeholder.write(f"📡 Call Status: **{status.capitalize().replace("_", " ")}**")
+    if status == "queue":
+        message_placeholder.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
+    if status == "failed":
+        message_placeholder.error("❌ Call Attempted! The call could not be completed due to an unknown issue. Please try again later.")
+    if status == "busy":
+        message_placeholder.error("❌ Call Attempted! The recipient was busy. Please try again later.")
+    if status == "denied":
+        message_placeholder.warning("🚫 Limit Reached! You have reached your limit for this number. Please try with a different number.")
+    if status == "in_progress":
+        message_placeholder.info("📢 Aptitude Test in Progress! Please wait 2 minutes after the test ends. Do not refresh the page—your score will appear soon!")
+    if status == "completed":
+        message_placeholder.success("✅ Call Completed! Test results will be processed soon.")
+        
 
 # Start Call button
 if "button_disabled" not in st.session_state:
     st.session_state.button_disabled = False  # Initially enabled
 if st.button("Start Call", disabled=st.session_state.button_disabled, on_click=lambda: setattr(st.session_state, "button_disabled", True)):
     if phone_number and language:
-        st.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
-        global_call_status["call_status"] = "queue"
-        status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-        agent_response = agent(phone_number, num_questions, "en", global_call_status)    
-
-        if global_call_status["call_status"] == "denied":
-            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-            st.warning("❌ Limit Reached! You have reached your limit for this number. Please try with a different number.")
-        
-        if global_call_status["call_status"] == "queue":
-            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-        
-        if global_call_status["call_status"] == "busy":
-            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-            st.error("❌ Call Attempted! The recipient was busy. Please try again later.")
-        
-        if global_call_status["call_status"] == "failed":
-            status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-            st.error("❌ Call Attempted! The call could not be completed due to an unknown issue. Please try again later.")
-
-             
-        if global_call_status["call_status"] == "completed":
-            st.success("✅ Call Completed! Test results will be processed soon.")
+        agent_response = agent(phone_number, num_questions, "en", status_updater)    
+           
+        if len(agent_response) != 0:
+            # st.success("✅ Call Completed! Test results will be processed soon.")
 
 
             # Display Call Details
