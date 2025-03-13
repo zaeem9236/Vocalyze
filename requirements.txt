@@ -41,3 +41,15 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 watchdog==6.0.0
+openai
+langchain-community
+langchain
+langchain_google_genai
+langchain_openai
+langchain_core
+langgraph
+tiktoken
+tavily-python
+pyngrok
+appwrite==7.1.0
+
