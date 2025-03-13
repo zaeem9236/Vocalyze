@@ -53,7 +53,7 @@ if "button_disabled" not in st.session_state:
     st.session_state.button_disabled = False  # Initially enabled
 if st.button("Start Call", disabled=st.session_state.button_disabled, on_click=lambda: setattr(st.session_state, "button_disabled", True)):
     if phone_number and language:
-        agent_response = agent(phone_number, num_questions, "en", st.session_state["random_uuid"], status_updater)    
+        agent_response = agent(phone_number, num_questions, "en", st.session_state.random_uuid, status_updater)    
            
         if len(agent_response) != 0:
             # st.success("✅ Call Completed! Test results will be processed soon.")
