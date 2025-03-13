@@ -13,7 +13,7 @@ load_dotenv()
 st.title("📞 Vocalyze - Agentic AI-Driven Spoken Aptitude Test")
 
 # Number input field
-phone_number = st.text_input("Enter your phone number", placeholder="+1234567890", autocomplete="off")
+phone_number = st.text_input("Enter your phone number", placeholder="+9230012345678", autocomplete="off")
 if phone_number:
     if not re.match(r'^\+?\d*$', phone_number):
         st.error("Please enter only numbers with an optional '+' at the start.")
