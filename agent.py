@@ -324,6 +324,7 @@ def agent(user_phone_num: str, num_questions: str, language: str, random_uuid, s
     global_status_update_func = status
     global_status_update_func('queue')
     response = app.invoke({"messages": "", "user_phone_number": user_phone_num, "num_questions": num_questions, "language": language},config)
+    langsmith_logs.append({"value": {"full_messages":  response['messages'], "content": response['messages'][-1].content}, "comment": "Value that is causing JSONDecodeError"})
     
     # updating logs in langsmith
     run =  list(langsmith_client.list_runs(project_name=os.environ.get("LANGSMITH_PROJECT"), limit=1))    # Convert generator to a list
@@ -351,7 +352,6 @@ def agent(user_phone_num: str, num_questions: str, language: str, random_uuid, s
     
     if response['call_status'] == 'completed':
       global_status_update_func('completed')
-      langsmith_logs.append({"value": {"full_messages":  response['messages'], "value": response['messages'][-1].content}, "comment": "Value that is causing JSONDecodeError"})
       first_decode = json.loads(response['messages'][-1].content)
       # Second load (final dict conversion if still string)
       if isinstance(first_decode, str):
