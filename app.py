@@ -32,9 +32,10 @@ status_placeholder = st.empty()
 # Call statuses to simulate real-time updates
 call_statuses = ["Queue", "Dialing", "Busy", "Ongoing", "Failed", "Completed"]
 
-import threading
 # Start Call button
-if st.button("Start Call"):
+if "button_disabled" not in st.session_state:
+    st.session_state.button_disabled = False  # Initially enabled
+if st.button("Start Call", disabled=st.session_state.button_disabled, on_click=lambda: setattr(st.session_state, "button_disabled", True)):
     if phone_number and language:
         st.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
         global_call_status["call_status"] = "queue"
