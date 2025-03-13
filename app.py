@@ -20,7 +20,11 @@ if phone_number:
         st.error("Please enter only numbers with an optional '+' at the start.")
         
 # Language selection
-language = st.selectbox("Select Language", ["English"])
+language = st.selectbox("Select language", ["English"])
+
+# Number of questions selection
+num_questions = st.selectbox("Choose number of questions ", ['2', '4'])
+
 
 # Call status placeholder
 status_placeholder = st.empty()
@@ -35,7 +39,7 @@ if st.button("Start Call"):
         st.success(f"📞 Calling {phone_number} for an aptitude test in {language}...")
         global_call_status["call_status"] = "queue"
         status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
-        agent_response = agent(phone_number, "2", "en", global_call_status)    
+        agent_response = agent(phone_number, num_questions, "en", global_call_status)    
 
         if global_call_status["call_status"] == "denied":
             status_placeholder.write(f"📡 Call Status: **{global_call_status["call_status"].capitalize()}**")
