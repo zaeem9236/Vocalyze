@@ -10,6 +10,7 @@ APPWRITE_API_KEY = os.environ.get('APPWRITE_API_KEY')
 APPWRITE_PROJECT_ID = os.environ.get('APPWRITE_PROJECT_ID')
 APPWRITE_DATABASE_ID = os.environ.get('APPWRITE_DATABASE_ID')
 APPWRITE_COLLECTION_ID = os.environ.get('APPWRITE_COLLECTION_ID')
+ENV=os.environ.get('ENV')
 os.environ["LANGSMITH_TRACING"]="true"
 os.environ["LANGSMITH_ENDPOINT"]="https://api.smith.langchain.com"
 os.environ["LANGSMITH_API_KEY"]=LANGSMITH_API_KEY
@@ -312,11 +313,13 @@ workflow.add_conditional_edges( # adding conditional edges
 )
 workflow.add_edge("tools", 'analyze_call_data') # adding edges
 app = workflow.compile(checkpointer=memory)
-config = {"configurable": {"thread_id": f"{random_uuid}"}}
+
 
 
 # Define the agent function   
-def agent(user_phone_num: str, num_questions: str, language: str, status):
+def agent(user_phone_num: str, num_questions: str, language: str, random_uuid, status):
+    # config = {"configurable": {"thread_id": f"{random_uuid}"}}
+    config = {"configurable": {"thread_id": f"dev-{random_uuid}" if ENV=='dev' else f"prod-{random_uuid}"}}
     global global_status_update_func
     global_status_update_func = status
     global_status_update_func('queue')
@@ -348,7 +351,8 @@ def agent(user_phone_num: str, num_questions: str, language: str, status):
     
     if response['call_status'] == 'completed':
       global_status_update_func('completed')
-      first_decode = json.loads(response['messages'][1].content)
+      langsmith_logs.append({"value": {"full_messages":  response['messages'], "value": response['messages'][-1].content}, "comment": "Value that is causing JSONDecodeError"})
+      first_decode = json.loads(response['messages'][-1].content)
       # Second load (final dict conversion if still string)
       if isinstance(first_decode, str):
         final_dict = json.loads(first_decode)
