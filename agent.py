@@ -16,6 +16,8 @@ os.environ["LANGSMITH_API_KEY"]=LANGSMITH_API_KEY
 os.environ["LANGSMITH_PROJECT"]="VOCALYZE"
 os.environ["OPENAI_API_KEY"]=OPENAI_API_KEY
 
+from prompts.call_prompt import call_prompt
+from prompts.result_prompt import result_prompt
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -96,57 +98,7 @@ def get_call_details(call_id: str) -> dict:
         "call_length": details["call_length"],
         "price": details["price"]
     }
-    prompt = f"""
-     Your task is to calculate the user's score based on the provided input data and generate a detailed analysis of their performance.
-      ### Input:
-      Below is the data you will receive:
-      {prompt_data}
-      ### Explanation:
-      1. **num_questions** (string): Total number of questions asked during the call.
-      2. **fetched_questions** (list of dictionaries): Each dictionary contains:
-         - **question** (string): The text of the question.
-         - **correct_answer** (string): The correct answer to the question.
-      3. **summary** (string): A summary of the call interaction, which includes:
-         - The user's responses.
-         - Which answers were correct or incorrect.
-         - Any corrections provided by the agent.
-      4. **country** (string): The country where the call originated.
-      5. **call_length** (string): The duration of the call in seconds.
-      6. **price** (string): The cost of the call.
-      7. **lead_generated** (Boolean): Lead generated or not, based on the summary.
-      ### Your Task:
-      1. Extract the **user's answers** from the **summary**.
-      2. Compare the user's answer with the **correct_answer** from **fetched_questions**.
-      3. For each question, create an **analysis object** with the following structure:
-         - **question**: The question text.
-         - **correct_answer**: The correct answer.
-         - **user_answer**: The extracted user's answer.
-         - **is_correct**: True if the user's answer is correct, otherwise False.
-      4. Calculate the **score** using this formula:
-      (score = (Correct Answers / {prompt_data['num_questions']}) * 100)
-      5. Set **lead_generated** to True if the user's response shows interest toward the question **"Would you like a free guide to improve your aptitude test skills"** or similar wording. Otherwise, set **lead_generated** to False.
-      6. Always return the output in the following dictionary format:
-      {{
-        "score": "<calculated_score>",
-        "analysis": [
-          {{
-            "question": "<question_text>",
-            "correct_answer": "<correct_answer>",
-            "user_answer": "<user_answer>",
-            "is_correct": "<True_or_False>"
-          }}
-        ],
-        "country": "<country>",
-        "call_length": "<call_length>",
-        "price": "<price>",
-        "lead_generated": "<True_or_False>"
-      }}
-      ### Important Rules:
-      - The **output must always be a dictionary** with the keys: `"score"`, `"analysis"`, `"country"`, `"call_length"`, `"price"`, and `"lead_generated"`.
-      - If no answer is found for a question in the summary, set `"user_answer"` to `"Not Answered"` and `"is_correct"` to False.
-      - Always calculate the result based on the **fetched_questions** field. Ignore questions from the summary if not present in **fetched_questions**.
-      - Be consistent with the **JSON format**.
-      """
+    prompt = result_prompt(prompt_data)
     langsmith_logs.append({"value": prompt, "comment": "Tool prompt"})
     final_response = llm.invoke(prompt).content
     print("final_response ",prompt)
@@ -221,44 +173,12 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
           update={ "call_status": "completed", "call_id": dummy_call_id },
           goto="analyze_call_data",
       )
-    scenario_prompt = f"""Aptitude Test Knowledge Check Call Script
-    Scenario: You are Alex, an AI assistant from Vocalyze Academy. You’re calling this person to ask them two quick aptitude test questions. If they don’t know the answer, provide a brief explanation. Keep the conversation friendly and engaging!
-    Call Script:
-    Person: Hello?
-    You: Hey, this is Alex from Vocalyze Academy! Can I take a quick minute to ask you two fun aptitude test questions?
-    Person: Uh, sure!
-    You: Great! Let’s get started—{state['fetched_questions'][0]['question']}
-    (If they answer correctly:)
-    You: That’s right! {state['fetched_questions'][0]['correct_response']} Nice work!
-    (If they don’t know:)
-    You: No worries! {state['fetched_questions'][0]['incorrect_response']}
-    You: Here’s the second one—{state['fetched_questions'][1]['question']}
-    (If they answer correctly:)
-    You: Exactly! {state['fetched_questions'][1]['correct_response']}
-    (If they don’t know:)
-    You: No problem! {state['fetched_questions'][1]['incorrect_response']}
-    """
-    if state['num_questions'] == 4:
-      scenario_prompt = scenario_prompt + f"""You: Alright, here’s another one—{state['fetched_questions'][2]['question']}
-    (If they answer correctly:)
-    You: Exactly! {state['fetched_questions'][2]['correct_response']}
-    (If they don’t know:)
-    You: No problem! {state['fetched_questions'][2]['incorrect_response']}
-    You: And here comes the last one—{state['fetched_questions'][3]['question']}
-    (If they answer correctly:)
-    You: Exactly! {state['fetched_questions'][3]['correct_response']}
-    (If they don’t know:)
-    You: No problem! {state['fetched_questions'][3]['incorrect_response']}
-    """
-    scenario_prompt = scenario_prompt + """You: Thanks for your time! You did great. Would you like a free guide to improve your aptitude test skills?
-    (If yes, send them a resource link.)
-    You: Awesome! I’ll send that over. Have a great day!
-    """
+
     import requests, json, time
     payload = {
         "phone_number": state['user_phone_number'],
         "pathway_id": None,
-        "task": scenario_prompt,
+        "task": call_prompt(state),
         "voice": "nat",
         "background_track": "none",
         # "first_sentence": "Hi this is AI",
