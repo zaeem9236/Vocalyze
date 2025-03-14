@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()
-import os, time, random, requests, json
+import os, time, random, requests, json, datetime
 LANGSMITH_API_KEY = os.environ.get('LANGSMITH_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 BLAND_AI_API_KEY = os.environ.get('BLAND_AI_API_KEY')
@@ -10,6 +10,8 @@ APPWRITE_API_KEY = os.environ.get('APPWRITE_API_KEY')
 APPWRITE_PROJECT_ID = os.environ.get('APPWRITE_PROJECT_ID')
 APPWRITE_DATABASE_ID = os.environ.get('APPWRITE_DATABASE_ID')
 APPWRITE_COLLECTION_ID = os.environ.get('APPWRITE_COLLECTION_ID')
+DISCORD_WEBHOOK_ID = os.environ.get('DISCORD_WEBHOOK_ID')
+DISCORD_WEBHOOK_TOKEN = os.environ.get('DISCORD_WEBHOOK_TOKEN')
 ENV=os.environ.get('ENV')
 os.environ["LANGSMITH_TRACING"]="true"
 os.environ["LANGSMITH_ENDPOINT"]="https://api.smith.langchain.com"
@@ -243,7 +245,22 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
       return Command(
           update={'call_status': 'failed', 'call_id': ''},
           goto='__end__',
-      )  
+      )
+    DISCORD_WEBHOOK_URL = f"https://discord.com/api/webhooks/{DISCORD_WEBHOOK_ID}/{DISCORD_WEBHOOK_TOKEN}"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
+
+    data = {
+    "content": f"📞 **Incoming Call Alert!**\n"
+               f"👤 **Caller Number:** `{state['user_phone_number']}`\n"
+               f"🕒 **Time:** `{timestamp}`\n"
+               f"📢 **Platform:** Vocalyze\n"
+               f"\n\n"
+    }
+    
+    try:
+        requests.post(DISCORD_WEBHOOK_URL, json=data, timeout=5)  # 5s timeout to prevent hanging
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Failed to send notification: {e}")
     call_id = response['call_id']
     event_url = f"{BLAND_AI_BASE_URL}/v1/event_stream/{call_id}"
     stop = False
