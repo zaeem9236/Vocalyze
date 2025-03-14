@@ -258,7 +258,7 @@ def initiate_call(state: AgentState) -> Command[Literal["analyze_call_data", "__
     }
     
     try:
-        requests.post(DISCORD_WEBHOOK_URL, json=data, timeout=5)  # 5s timeout to prevent hanging
+        requests.post(DISCORD_WEBHOOK_URL, json=data)
     except requests.exceptions.RequestException as e:
         print(f"⚠️ Failed to send notification: {e}")
     call_id = response['call_id']
