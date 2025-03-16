@@ -13,7 +13,7 @@ APPWRITE_COLLECTION_ID = os.environ.get('APPWRITE_COLLECTION_ID')
 DISCORD_WEBHOOK_ID = os.environ.get('DISCORD_WEBHOOK_ID')
 DISCORD_WEBHOOK_TOKEN = os.environ.get('DISCORD_WEBHOOK_TOKEN')
 ENV=os.environ.get('ENV')
-os.environ["LANGSMITH_TRACING"]="true"
+os.environ["LANGSMITH_TRACING"]="false" if ENV=='dev' else "true"
 os.environ["LANGSMITH_ENDPOINT"]="https://api.smith.langchain.com"
 os.environ["LANGSMITH_API_KEY"]=LANGSMITH_API_KEY
 os.environ["LANGSMITH_PROJECT"]="VOCALYZE"
