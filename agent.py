@@ -77,7 +77,7 @@ agent_state_tracker = {}
 
 
 # Define global funcion to update call status
-global_status_update_func = lambda: None
+global_status_update_func = lambda _: None
 
 
 # Define the agent tools
